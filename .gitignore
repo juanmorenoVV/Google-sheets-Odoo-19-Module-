@@ -1,0 +1,16 @@
+
+!docker-compose.yml
+!Dockerfile
+!servers.json.example
+!extra-addons/
+!requirements.txt
+
+
+.env
+backups
+odoo.conf
+pgadmin-servers.json
+postgresql
+pgadmindata/
+**/__pycache__/
+*.py[cod]

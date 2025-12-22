@@ -1,0 +1,45 @@
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: odoo-custom:19
+    depends_on:
+      - db
+    ports:
+      - "${ODOO_PORT}:8069"
+    volumes:
+      - ./addons:/mnt/extra-addons # Carpeta para los módulos personalizados
+      - ./odoo.conf:/etc/odoo/odoo.conf # Archivo de configuración de Odoo
+    environment:
+      - HOST=db
+      - USER=${DB_USER}
+      - PASSWORD=${DB_PASSWORD}
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - ./postgresql:/var/lib/postgresql/data # Guarda los datos de la base de datos
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:80"  # http://localhost:5050
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+      - PGADMIN_CONFIG_SERVER_MODE=False  # Modo escritorio
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json
+      - ./backups:/var/lib/pgadmin/storage/admin_admin.com
+    depends_on:
+      - db
+
+volumes:
+  pg_data:
+  pgadmin_data: 
