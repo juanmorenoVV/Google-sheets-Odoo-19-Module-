@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: odoo-custom:19
+    command: odoo --dev=all 
     depends_on:
       - db
     ports:
@@ -11,6 +12,7 @@ services:
     volumes:
       - ./addons:/mnt/extra-addons # Carpeta para los módulos personalizados
       - ./odoo.conf:/etc/odoo/odoo.conf # Archivo de configuración de Odoo
+      - .:/workspace
     environment:
       - HOST=db
       - USER=${DB_USER}

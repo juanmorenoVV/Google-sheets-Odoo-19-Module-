@@ -1,0 +1,24 @@
+{
+    "name": "Odoo Development Container",
+    "dockerComposeFile": ["../docker-compose.yml"],
+    "service": "web", 
+    "workspaceFolder": "/workspace",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "oca.odoo-snippets",
+                "ms-python.vscode-pylint"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/bin/python3",
+                "python.analysis.extraPaths": [
+                    "/usr/lib/python3/dist-packages"
+                ]
+            }
+        }
+    },
+
+    "remoteUser": "root"
+}

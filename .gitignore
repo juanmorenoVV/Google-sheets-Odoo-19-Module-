@@ -2,7 +2,7 @@
 !docker-compose.yml
 !Dockerfile
 !servers.json.example
-!extra-addons/
+!addons/
 !requirements.txt
 
 
