@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: odoo-custom:19
-    command: odoo --dev=all 
+    command: odoo --dev=xml,qweb --config=/etc/odoo/odoo.conf
     depends_on:
       - db
     ports:
