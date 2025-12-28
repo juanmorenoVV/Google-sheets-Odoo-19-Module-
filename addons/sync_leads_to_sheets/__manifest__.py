@@ -11,7 +11,8 @@
         'base_setup'  # Necesario para heredar los ajustes generales
     ],
     'data': [
-        # 'security/ir.model.access.csv',
+        'security/ir.model.access.csv',
+        'wizard/lead_to_task_wizard_view.xml',
         'views/res_config_settings.xml',
         # 'views/project_views.xml',
         'views/res_crm_lead.xml',
