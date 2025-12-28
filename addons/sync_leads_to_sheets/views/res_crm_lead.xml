@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Heredar el Quick Create Form del CRM -->
+    <record id="quick_create_opportunity_form_inherit_sync" model="ir.ui.view">
+        <field name="name">quick.create.opportunity.form.inherit.sync</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.quick_create_opportunity_form"/>
+        <field name="arch" type="xml">
+            <!-- Buscar el grupo completo y agregar al final -->
+            <xpath expr="//group" position="inside">
+                <field name="project_id" 
+                       required="True"
+                       string="Proyecto"
+                       placeholder="Seleccionar proyecto..."
+                       options="{'no_create': True, 'no_quick_create': True}"
+                       colspan="2"
+                       domain="[('use_google_sheets', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

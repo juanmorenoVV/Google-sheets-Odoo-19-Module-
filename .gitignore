@@ -5,7 +5,7 @@
 !addons/
 !requirements.txt
 
-
+.vscode/
 .env
 backups
 odoo.conf
