@@ -180,7 +180,7 @@ class CRMLead(models.Model):
     def _create_task_from_lead(self):
         """ Crea una tarea en el proyecto seleccionado con la info del Lead """
         self.ensure_one()
-        
+            
         if not self.project_id:
             _logger.error(f"No hay proyecto asignado al Lead {self.name}")
             return False
