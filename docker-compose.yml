@@ -17,6 +17,7 @@ services:
       - HOST=db
       - USER=${DB_USER}
       - PASSWORD=${DB_PASSWORD}
+      - ODOO_PASSWD=${ODOO_ADMIN_PASSWORD}
 
   db:
     image: postgres:15
