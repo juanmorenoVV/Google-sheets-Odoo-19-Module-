@@ -7,6 +7,7 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
+
 class CRMLead(models.Model):
     _inherit = 'crm.lead'
 
@@ -25,109 +26,74 @@ class CRMLead(models.Model):
         copy=False
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Se ejecuta cuando se crea un nuevo lead.
+        Dispara la sincronización con Google Sheets.
+        """
+        # 1. Crear el lead normalmente
+        leads = super(CRMLead, self).create(vals_list)
+        
+        # 2. Procesar cada lead creado
+        for lead in leads:
+            lead._process_new_lead()
+        
+        return leads
 
-
-    def _process_won_lead(self):
-        """ Método central para procesar un lead ganado """
+    def _process_new_lead(self):
+        """Método central para procesar un lead recién creado"""
         self.ensure_one()
         
-        notifications = []
-        
-        # 1. Enviar a Google Sheets si aplica
-        if self.project_id and self.project_id.use_google_sheets and not self.google_sync_done:
-            success, message = self._send_to_google_sheets()
+        # Solo procesar si tiene proyecto con Google Sheets habilitado
+        if not self.project_id:
+            _logger.info(f"Lead {self.name}: Sin proyecto asignado, no se sincroniza")
+            return
             
-            if success:
-                self.google_sync_done = True
-                notifications.append("✅ Sincronizado con Google Sheets")
-                
-                # 2. Crear tarea SOLO si Google fue exitoso
-                try:
-                    task = self._create_task_from_lead()
-                    if task:
-                        notifications.append(f"✅ Tarea creada: {task.name}")
-                        _logger.info(f"Tarea {task.id} creada para Lead {self.name}")
-                except Exception as e:
-                    _logger.error(f"Error creando tarea: {str(e)}")
-                    notifications.append("⚠️ No se pudo crear la tarea")
-            else:
-                notifications.append(f"❌ Error Google: {message}")
-        
-        return notifications
-
-
-    def action_set_won(self):
-        """ Cuando usan el botón """
-        res = super(CRMLead, self).action_set_won()
-        
-        for lead in self:
-            notifications = lead._process_won_lead()
+        if not self.project_id.use_google_sheets:
+            _logger.info(f"Lead {self.name}: Proyecto sin Google Sheets habilitado")
+            return
             
-            if notifications:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Lead Ganado',
-                        'message': ' | '.join(notifications),
-                        'type': 'success' if '❌' not in ' '.join(notifications) else 'warning',
-                        'sticky': False,
-                    }
-                }
+        if self.google_sync_done:
+            _logger.info(f"Lead {self.name}: Ya fue sincronizado previamente")
+            return
         
-        return res
+        # Enviar a Google Sheets
+        success, message = self._send_to_google_sheets()
+        
+        if success:
+            self.google_sync_done = True
+            _logger.info(f"✅ Lead {self.name} sincronizado con Google Sheets")
+            
+            # Notificar al usuario
+            self._notify_sync_result(True, "Lead sincronizado con Google Sheets")
+            
+            # Crear tarea si es necesario
+            try:
+                task = self._create_task_from_lead()
+                if task:
+                    _logger.info(f"✅ Tarea {task.id} creada para Lead {self.name}")
+            except Exception as e:
+                _logger.error(f"Error creando tarea: {str(e)}")
+        else:
+            _logger.error(f"❌ Error sincronizando Lead {self.name}: {message}")
+            self._notify_sync_result(False, message)
 
-    def write(self, vals):
-        """ Cuando arrastran """
-        old_stages = {lead.id: lead.stage_id.id for lead in self}
-        
-        res = super(CRMLead, self).write(vals)
-        
-        if 'stage_id' in vals:
-            for lead in self.filtered(lambda l: l.stage_id.is_won):
-                old_stage = old_stages.get(lead.id)
-                
-                # Si acaba de pasar a Won
-                if old_stage != lead.stage_id.id:
-                    notifications = lead._process_won_lead()
-                    
-                    # Log para debug
-                    if notifications:
-                        _logger.info(f"Lead {lead.name} procesado: {notifications}")
-        
-        return res
-
-    @api.model
-    def _notify_success_drag(self):
-        """ Notificación de éxito para drag & drop """
-        # Usar el sistema de notificaciones del cliente web
+    def _notify_sync_result(self, success, message):
+        """Envía notificación al usuario sobre el resultado"""
         self.env['bus.bus']._sendone(
             self.env.user.partner_id,
-            'notification',
+            'simple_notification',
             {
-                'type': 'success',
-                'title': 'Google Sheets',
-                'message': 'Lead sincronizado correctamente',
-                'sticky': False,
-            }
-        )
-        
-    @api.model  
-    def _notify_error_drag(self, error_msg):
-        """ Notificación de error para drag & drop """
-        self.env['bus.bus']._sendone(
-            self.env.user.partner_id,
-            'notification',
-            {
-                'type': 'danger',
-                'title': 'Error Google Sheets',
-                'message': f'No se pudo sincronizar: {error_msg}',
-                'sticky': True,
+                'type': 'success' if success else 'danger',
+                'title': 'Google Sheets' if success else 'Error Google Sheets',
+                'message': message,
+                'sticky': not success,
             }
         )
 
     def _get_google_client(self):
-        """ Autenticación """
+        """Autenticación con Google"""
         params = self.env['ir.config_parameter'].sudo()
         key_file = params.get_param('crm_sheets.google_key_file')
         
@@ -141,7 +107,7 @@ class CRMLead(models.Model):
             return False, str(e)
 
     def _send_to_google_sheets(self):
-        """ Envío de datos con retorno de estado """
+        """Envío de datos a Google Sheets"""
         if self.google_sync_done:
             return True, "Ya sincronizado"
             
@@ -169,8 +135,6 @@ class CRMLead(models.Model):
             ]
 
             worksheet.append_row(row)
-            _logger.info(f"Lead {self.name} enviado a Google Sheets")
-
             return True, "Success"
 
         except Exception as e:
@@ -178,36 +142,31 @@ class CRMLead(models.Model):
             return False, str(e)
 
     def _create_task_from_lead(self):
-        """ Crea una tarea en el proyecto seleccionado con la info del Lead """
+        """Crea una tarea en el proyecto seleccionado"""
         self.ensure_one()
             
         if not self.project_id:
-            _logger.error(f"No hay proyecto asignado al Lead {self.name}")
             return False
         
-        # 1. Buscar etapas del proyecto (pueden ser específicas o globales)
-        # Primero intentamos etapas específicas del proyecto
+        # Buscar etapa del proyecto
         stage = self.env['project.task.type'].search([
             '|',
-            ('project_ids', '=', False),  # Etapas globales (para todos los proyectos)
-            ('project_ids', 'in', [self.project_id.id])  # Etapas específicas de este proyecto
+            ('project_ids', '=', False),
+            ('project_ids', 'in', [self.project_id.id])
         ], order='sequence asc', limit=1)
         
-        # Si no hay ninguna etapa, creamos una por defecto
         if not stage:
             stage = self.env['project.task.type'].create({
                 'name': 'Por hacer',
                 'sequence': 10,
                 'project_ids': [(4, self.project_id.id)]
             })
-            _logger.warning(f"Se creó etapa por defecto para proyecto {self.project_id.name}")
         
-        _logger.info(f"Creando tarea en etapa: {stage.name}")
-        
-        # 2. Construir descripción HTML mejorada
-        description_lines = []
-        description_lines.append("<h3>📋 Información del Lead Ganado:</h3>")
-        description_lines.append("<ul>")
+        # Construir descripción
+        description_lines = [
+            "<h3>📋 Información del Nuevo Lead:</h3>",
+            "<ul>"
+        ]
         
         if self.partner_id:
             description_lines.append(f"<li><strong>Cliente:</strong> {self.partner_id.name}</li>")
@@ -228,39 +187,25 @@ class CRMLead(models.Model):
         
         description_lines.append("</ul>")
         
-        # 3. Valores de la tarea con stage_id incluido
+        # Crear tarea
         task_vals = {
             'name': f"[LEAD-{self.id}] {self.partner_id.name or self.contact_name or self.name}",
             'project_id': self.project_id.id,
-            'stage_id': stage.id,  # 🔥 ESTO ES LO IMPORTANTE
+            'stage_id': stage.id,
             'description': '\n'.join(description_lines),
         }
         
-        # Solo agregar partner si existe
         if self.partner_id:
             task_vals['partner_id'] = self.partner_id.id
         
-        # Asignar al mismo usuario del lead si existe
         if self.user_id:
             task_vals['user_ids'] = [(6, 0, [self.user_id.id])]
         
-        # 4. Crear la tarea
         try:
             task = self.env['project.task'].create(task_vals)
-            _logger.info(f"✅ Tarea creada: {task.name} en etapa {stage.name}")
             
-            # 5. Agregar referencia cruzada en el Lead
             self.message_post(
-                body=f'<p>✅ Tarea creada en proyecto <strong>{self.project_id.name}</strong>:</p>'
-                    f'<p><a href="#id={task.id}&model=project.task&view_type=form">{task.name}</a></p>',
-                message_type='notification',
-                subtype_xmlid='mail.mt_note'
-            )
-            
-            # 6. Opcional: Agregar referencia en la tarea sobre el Lead
-            task.message_post(
-                body=f'<p>📥 Tarea generada desde Lead ganado:</p>'
-                    f'<p><a href="#id={self.id}&model=crm.lead&view_type=form">{self.name}</a></p>',
+                body=f'<p>✅ Tarea creada: <a href="#id={task.id}&model=project.task">{task.name}</a></p>',
                 message_type='notification',
                 subtype_xmlid='mail.mt_note'
             )
@@ -268,10 +213,5 @@ class CRMLead(models.Model):
             return task
             
         except Exception as e:
-            _logger.error(f"❌ Error creando tarea: {str(e)}")
-            self.message_post(
-                body=f'<p>⚠️ Error al crear tarea: {str(e)}</p>',
-                message_type='notification',
-                subtype_xmlid='mail.mt_note'
-            )
+            _logger.error(f"Error creando tarea: {str(e)}")
             return False
