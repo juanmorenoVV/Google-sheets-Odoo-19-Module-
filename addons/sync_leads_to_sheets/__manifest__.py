@@ -12,10 +12,7 @@
     ],
     'data': [
         # 'security/ir.model.access.csv',
-<<<<<<< Updated upstream
-=======
         # 'wizard/lead_to_task_wizard_view.xml',
->>>>>>> Stashed changes
         'views/res_config_settings.xml',
         # 'views/project_views.xml',
         'views/res_crm_lead.xml',
