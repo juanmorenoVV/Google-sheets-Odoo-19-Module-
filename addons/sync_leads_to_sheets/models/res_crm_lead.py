@@ -50,7 +50,7 @@ class CRMLead(models.Model):
             _logger.info(f"Lead {self.name}: Sin proyecto asignado, no se sincroniza")
             return
             
-        if not self.project_id.use_google_sheets:
+        if not (self.project_id.use_google_sheets):
             _logger.info(f"Lead {self.name}: Proyecto sin Google Sheets habilitado")
             return
             
@@ -70,9 +70,12 @@ class CRMLead(models.Model):
             
             # Crear tarea si es necesario
             try:
-                task = self._create_task_from_lead()
-                if task:
-                    _logger.info(f"✅ Tarea {task.id} creada para Lead {self.name}")
+                if self.project_id.create_task_on_lead:
+                    task = self._create_task_from_lead()
+                    if task:
+                        _logger.info(f"✅ Tarea {task.id} creada para Lead {self.name}")
+                else:    
+                    _logger.info(f"Creacion de tarea no asignada al proyecto {self.project_id.name}")
             except Exception as e:
                 _logger.error(f"Error creando tarea: {str(e)}")
         else:

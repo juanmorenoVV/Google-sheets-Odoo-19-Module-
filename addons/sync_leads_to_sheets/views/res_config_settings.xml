@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="res_config_settings_view_form_crm_sheets" model="ir.ui.view">
-        <field name="name">res.config.settings.view.form.inherit.crm.sheets</field>
+    <record id="res_config_settings_view_form_sync_leads" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.sync.leads</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="crm.res_config_settings_view_form"/>
+        <field name="inherit_id" ref="project.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//app[@name='crm']" position="inside">
+            <xpath expr="//block[@name='project_time']" position="after">
                 <block title="Integración Google Sheets" name="google_sheets_config_block">
                     
                     <setting string="Credenciales de Google" help="Sube el JSON de tu Service Account">
@@ -15,13 +15,29 @@
                         </div>
                     </setting>
 
-                    <setting string="Mapeo de Proyectos" help="Selecciona el proyecto y pega su ID de Google Sheet">
+                    <setting string="Proyectos con sincronización activa" 
+                            help="Configura qué proyectos sincronizarán leads con Google Sheets">
                         <div class="content-group">
-                            <field name="google_sheets_project_ids">
-                                <list editable="bottom">
-                                    <field name="name" readonly="1"/> <field name="google_spreadsheet_id" placeholder="ID de la Hoja de Google..."/>
+                            <div class="text-muted mb-2">
+                                <i class="fa fa-info-circle"/> Selecciona proyectos y configura su ID de Google Sheet
+                            </div>
+                            <field name="google_sheets_project_ids" nolabel="1">
+                                <list editable="bottom" create="false" delete="false">
+                                    <field name="name" readonly="1" string="Proyecto"/> 
+                                    <field name="google_spreadsheet_id" 
+                                           string="ID Google Sheet"
+                                           placeholder="Ej: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                                           required="1"/>
+                                    <field name="create_task_on_lead" 
+                                           string="Crear Tarea"
+                                           widget="boolean_toggle"/>
                                 </list>
                             </field>
+                            <div class="text-muted mt-2">
+                                <small>
+                                    💡 <b>Tip:</b> El ID está en la URL de tu Google Sheet después de /d/
+                                </small>
+                            </div>
                         </div>
                     </setting>
 
