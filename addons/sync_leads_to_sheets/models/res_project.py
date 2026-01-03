@@ -16,3 +16,10 @@ class Project(models.Model):
         string="ID de Google Spreadsheet",
         help="El ID único de la hoja de cálculo (se encuentra en la URL)."
     )
+
+    # variable de control para la creacion de tareas 
+    create_task_on_lead = fields.Boolean(
+        string="Crear tarea al recibir lead",
+        default=False,
+        help="Abre un wizard para crear una tarea cuando se crea un lead"
+    )

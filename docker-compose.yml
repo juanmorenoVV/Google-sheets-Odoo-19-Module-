@@ -4,7 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: odoo-custom:19
-    command: odoo --dev=xml,qweb --config=/etc/odoo/odoo.conf
+    command: >
+      odoo -u ${MODULE_NAME} 
+      --dev=xml,qweb 
+      --config=/etc/odoo/odoo.conf
     depends_on:
       - db
     ports:
@@ -17,6 +20,8 @@ services:
       - HOST=db
       - USER=${DB_USER}
       - PASSWORD=${DB_PASSWORD}
+      - ODOO_PASSWD=${ODOO_ADMIN_PASSWORD}
+      - MODULE_NAME=${MODULE_NAME}
 
   db:
     image: postgres:15
